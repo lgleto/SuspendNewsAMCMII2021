@@ -2,28 +2,43 @@ package ipca.example.suspendnews
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.provider.Settings
 import android.view.View
 import android.view.ViewGroup
 import android.widget.BaseAdapter
 import android.widget.ListView
 import android.widget.TextView
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 
 class MainActivity : AppCompatActivity() {
 
-    var articles : MutableList<Article> = arrayListOf()
+    var articles :List<Article> = arrayListOf()
     var adapter : ArticlesAdapter? = null
+
+
+    private lateinit var viewModel: MainActivityViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        articles.add(Article("text", "teste", "url"))
+        viewModel = ViewModelProvider(this).get(MainActivityViewModel::class.java)
+        viewModel.articles.observe(this, Observer {
+            articles = it
+            adapter?.notifyDataSetChanged()
+        })
+        viewModel.setArticlesType("sports")
 
         val listView = findViewById<ListView>(R.id.listView)
         adapter = ArticlesAdapter()
         listView.adapter = adapter
 
-        emit{} Backend.getNews()
+
 
     }
 

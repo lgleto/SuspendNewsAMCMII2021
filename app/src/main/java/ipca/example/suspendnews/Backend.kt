@@ -1,8 +1,9 @@
 package ipca.example.suspendnews
 
-import android.os.AsyncTask
-import android.util.Log
+import androidx.lifecycle.liveData
 import androidx.loader.content.AsyncTaskLoader
+import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.GlobalScope
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -19,13 +20,19 @@ class Backend {
 
     companion object {
 
-        const val BASE_API = "https://newsapi.org/v2/top-headlines?country=us&category=business&apiKey=1765f87e4ebc40229e80fd0f75b6416c"
+        const val BASE_API = "https://newsapi.org/v2/"
 
-        suspend fun getNews() = suspendCoroutine<JSONObject> {
+        fun fetchArticles(typesNews:String) = liveData(IO) {
+            emit(getNews(typesNews))
+        }
 
+
+        suspend fun getNews(newsType:String) = suspendCoroutine<List<Article>> {
             try {
 
-                val urlc: HttpURLConnection = URL(BASE_API).openConnection() as HttpURLConnection
+                val urlc: HttpURLConnection = URL(BASE_API
+                +"top-headlines?country=us&category=$newsType&apiKey=1765f87e4ebc40229e80fd0f75b6416c"
+                ).openConnection() as HttpURLConnection
                 urlc.setRequestProperty("User-Agent", "Test")
                 urlc.setRequestProperty("Connection", "close")
                 urlc.setConnectTimeout(1500)
@@ -45,8 +52,23 @@ class Backend {
                     }
                 }
                 brin.close()
+                val result = JSONObject(str)
+                if (result.getString("status")=="ok"){
+                    val articlesJSONArray = result.getJSONArray("articles")
+                    var articles : MutableList<Article> = arrayListOf()
+                    for (index in 0 until articlesJSONArray.length()) {
 
-                it.resume(JSONObject(str))
+                        val jsonArticle : JSONObject = articlesJSONArray.get(index) as JSONObject
+                        var article = Article.fromJSON(jsonArticle)
+                        articles.add(article)
+
+                    }
+                    it.resume(articles)
+
+                }
+
+
+
 
             }catch (e:Exception){
                 e.printStackTrace()
